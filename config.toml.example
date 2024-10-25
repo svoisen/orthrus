@@ -1,0 +1,8 @@
+HostName=localhost
+GeminiPort=1965
+WebPort=9090
+GeminiCertStore="/tmp"
+MarkdownDir=content
+WebTemplateDir=templates
+GeminiOutputDir=_gemini
+WebOutputDir=_web
