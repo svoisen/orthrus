@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"polypub/internal/build"
 	"polypub/internal/config"
-	"polypub/internal/web"
 )
 
 func main() {
@@ -18,15 +18,14 @@ func main() {
 	}
 
 	var err error
-	c, err := config.GetConfig("config.toml")
+	cfg, err := config.GetConfig("config.toml")
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	switch args[0] {
 	case "build":
-		// buildGeminiCapsule(config.ContentDir)
-		buildWeb(c)
+		runBuild(cfg)
 	default:
 		fmt.Printf("unexpected subcommand %v\n", args[0])
 	}
@@ -42,14 +41,17 @@ func main() {
 	// }
 }
 
-func buildWeb(c config.Config) {
-	webConfig := web.WebBuilderConfig{
-		AssetsDir:   c.WebAssetsDir,
-		TemplateDir: c.WebTemplateDir,
-		MarkdownDir: c.MarkdownDir,
-		OutputDir:   c.WebOutputDir,
-		PrintAst:    false,
+func runBuild(cfg config.Config) {
+	builderCfg := build.BuilderConfig{
+		AssetsDir:       cfg.WebAssetsDir,
+		TemplateDir:     cfg.WebTemplateDir,
+		MarkdownDir:     cfg.MarkdownDir,
+		WebOutputDir:    cfg.WebOutputDir,
+		GeminiOutputDir: cfg.GeminiOutputDir,
+		BuildWeb:        true,
+		BuildGemini:     true,
+		PrintAst:        false,
 	}
-	builder := web.NewWebBuilder(webConfig)
+	builder := build.NewBuilder(builderCfg)
 	builder.Build()
 }
