@@ -2,8 +2,8 @@ package gemini
 
 import (
 	"context"
+	"fmt"
 	"log"
-	"log/slog"
 	"os"
 	"time"
 
@@ -12,9 +12,10 @@ import (
 )
 
 type GeminiServerConfig struct {
-	HostName  string
-	CertStore string
-	Port      int
+	ContentDir string
+	HostName   string
+	CertStore  string
+	Port       int
 }
 
 type GeminiServer struct {
@@ -22,9 +23,9 @@ type GeminiServer struct {
 	Certificates certificate.Store
 }
 
-func NewGeminiServer(c GeminiServerConfig) *GeminiServer {
+func NewGeminiServer(cfg GeminiServerConfig) *GeminiServer {
 	server := &GeminiServer{
-		Config: c,
+		Config: cfg,
 	}
 
 	return server
@@ -37,7 +38,7 @@ func (s *GeminiServer) Start() error {
 
 	err := s.Certificates.Load(s.Config.CertStore)
 	if err != nil {
-		log.Fatal(err)
+		log.Fatalf("unable to load certificate %w", err)
 	}
 
 	s.Certificates.Register("*." + s.Config.HostName)
@@ -46,6 +47,7 @@ func (s *GeminiServer) Start() error {
 
 	var mux gemini.Mux
 	mux.HandleFunc("/", s.getGeminiPage)
+	server.Handler = gemini.LoggingMiddleware(&mux)
 
 	err = server.ListenAndServe(context.Background())
 	if err != nil {
@@ -56,6 +58,6 @@ func (s *GeminiServer) Start() error {
 }
 
 func (s *GeminiServer) getGeminiPage(_ context.Context, w gemini.ResponseWriter, r *gemini.Request) {
-	slog.Info("Serving page")
-	gemini.ServeFile(w, os.DirFS("content"), "index.gmi")
+	fmt.Println("serving page")
+	gemini.ServeFile(w, os.DirFS(s.Config.ContentDir), "index.gmi")
 }

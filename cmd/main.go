@@ -7,6 +7,8 @@ import (
 	"os"
 	"polypub/internal/build"
 	"polypub/internal/config"
+	"polypub/internal/gemini"
+	"sync"
 )
 
 func main() {
@@ -20,25 +22,37 @@ func main() {
 	var err error
 	cfg, err := config.GetConfig("config.toml")
 	if err != nil {
-		log.Fatal(err)
+		log.Fatalf("could not load config: %w", err)
 	}
 
 	switch args[0] {
 	case "build":
+		fmt.Println("building ...")
 		runBuild(cfg)
+	case "serve":
+		wg := new(sync.WaitGroup)
+		wg.Add(1)
+		go func() {
+			runGeminiServer(cfg)
+			wg.Done()
+		}()
+		wg.Wait()
 	default:
 		fmt.Printf("unexpected subcommand %v\n", args[0])
 	}
+}
 
-	// case "serve":
-	// 	wg := new(sync.WaitGroup)
-	// 	wg.Add(1)
-	// 	go func() {
-	// 		initGeminiServer()
-	// 		wg.Done()
-	// 	}()
-	// 	wg.Wait()
-	// }
+func runGeminiServer(cfg config.Config) {
+	fmt.Println("starting gemini server ...")
+	serverCfg := gemini.GeminiServerConfig{
+		ContentDir: cfg.GeminiOutputDir,
+		HostName:   cfg.HostName,
+		CertStore:  cfg.GeminiCertStore,
+		Port:       1965,
+	}
+
+	server := gemini.NewGeminiServer(serverCfg)
+	server.Start()
 }
 
 func runBuild(cfg config.Config) {
@@ -48,7 +62,7 @@ func runBuild(cfg config.Config) {
 		MarkdownDir:     cfg.MarkdownDir,
 		WebOutputDir:    cfg.WebOutputDir,
 		GeminiOutputDir: cfg.GeminiOutputDir,
-		BuildWeb:        true,
+		BuildWeb:        false,
 		BuildGemini:     true,
 		PrintAst:        false,
 	}

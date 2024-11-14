@@ -184,8 +184,8 @@ func (b *builder) outputGemtext(contents []byte, filename string) error {
 	)
 
 	opts := []gem.Option{
-		gem.WithHeadingLink(gem.HeadingLinkBelow),
-		gem.WithParagraphLink(gem.ParagraphLinkBelow),
+		gem.WithHeadingLink(gem.HeadingLinkAuto),
+		gem.WithParagraphLink(gem.ParagraphLinkOff),
 	}
 	var buf bytes.Buffer
 	md.SetRenderer(gem.New(opts...))
