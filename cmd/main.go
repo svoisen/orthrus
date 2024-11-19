@@ -6,6 +6,7 @@ import (
 	"ibeji/internal/build"
 	"ibeji/internal/config"
 	"ibeji/internal/gemini"
+	"ibeji/internal/web"
 	"log"
 	"os"
 	"sync"
@@ -14,7 +15,20 @@ import (
 )
 
 func main() {
+	// Define flags
+	configPath := flag.String("config", "config.toml", "path to config file")
+	flag.StringVar(configPath, "c", "config.toml", "path to config file (shorthand)")
+
+	// Parse flags
 	flag.Parse()
+
+	// Ensure a config path is provided
+	if *configPath == "" {
+		fmt.Println("config file path is required")
+		os.Exit(1)
+	}
+
+	// Ensure a valid subcommand is provided
 	args := flag.Args()
 	if len(args) < 1 {
 		fmt.Println("expected 'serve' or 'build' subcommand")
@@ -22,9 +36,10 @@ func main() {
 	}
 
 	var err error
-	cfg, err := config.GetConfig("config.toml")
+	cfg, err := config.GetConfig(*configPath)
 	if err != nil {
-		log.Fatalf("could not load config file")
+		fmt.Println("could not load config file")
+		os.Exit(1)
 	}
 
 	switch args[0] {
@@ -33,9 +48,14 @@ func main() {
 	case "serve":
 		runBuild(cfg)
 		wg := new(sync.WaitGroup)
-		wg.Add(1)
+		wg.Add(3)
 		go func() {
 			watchMarkdownDir(cfg)
+			wg.Done()
+		}()
+		go func() {
+			runWebServer(cfg)
+			wg.Done()
 		}()
 		go func() {
 			runGeminiServer(cfg)
@@ -43,7 +63,9 @@ func main() {
 		}()
 		wg.Wait()
 	default:
-		log.Println("unexpected subcommand:", args[0])
+		fmt.Println("unexpected subcommand:", args[0])
+		fmt.Println("valid commands are 'build' or 'serve'")
+		os.Exit(1)
 	}
 }
 
@@ -114,8 +136,16 @@ func runGeminiServer(cfg config.Config) {
 	server.Start()
 }
 
+func runWebServer(cfg config.Config) {
+	serverCfg := web.WebServerConfig{
+		ContentDir: cfg.WebOutputDir,
+		Port:       8080,
+	}
+	server := web.NewWebServer(serverCfg)
+	server.Start()
+}
+
 func runBuild(cfg config.Config) {
-	log.Println("running build ...")
 	builder := createBuilder(cfg)
 	builder.BuildAll()
 }

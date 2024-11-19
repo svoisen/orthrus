@@ -2,6 +2,7 @@ package build
 
 import (
 	"bytes"
+	"fmt"
 	"ibeji/internal/file"
 	"log"
 	"os"
@@ -50,6 +51,8 @@ func NewBuilder(c BuilderConfig) Builder {
 	extensions := parser.CommonExtensions | parser.AutoHeadingIDs | parser.NoEmptyLineBeforeBlock
 	parser := parser.NewWithExtensions(extensions)
 
+	// @TODO: there is really no reason to load the template cache
+	// and parser if we are not building HTML
 	htmlFlags := html.CommonFlags
 	htmlRendererOptions := html.RendererOptions{Flags: htmlFlags}
 	htmlRenderer := html.NewRenderer(htmlRendererOptions)
@@ -59,6 +62,11 @@ func NewBuilder(c BuilderConfig) Builder {
 		TemplateDir: c.TemplateDir,
 	}
 	templateCache := NewTemplateCache(templateCacheCfg)
+	err := templateCache.LoadTemplates()
+	if err != nil {
+		fmt.Printf("unable to load templates: %v", err)
+		os.Exit(1)
+	}
 
 	builder := &builder{
 		Config:        c,
@@ -70,6 +78,8 @@ func NewBuilder(c BuilderConfig) Builder {
 	return builder
 }
 
+// BuildAll walks the markdown directory and builds all markdown files
+// after clearing the output directories.
 func (b *builder) BuildAll() error {
 	if b.Config.BuildWeb {
 		b.prepareWebBuild()
@@ -87,17 +97,18 @@ func (b *builder) BuildAll() error {
 	return nil
 }
 
+// BuildFile converts a single markdown file to HTML and gemtext.
 func (b *builder) BuildFile(path string) error {
 	ext := strings.ToLower(filepath.Ext(path))
 
 	if ext != ".md" && ext != ".markdown" {
-		log.Printf("[Builder] skipping file %v, not a markdown file\n", path)
+		log.Printf("skipping file %v, not a markdown file\n", path)
 		return nil
 	}
 
 	fileContents, err := os.ReadFile(path)
 	if err != nil {
-		log.Printf("[Builder] unable to read file %v: %v\n", path, err)
+		log.Printf("unable to read file %v: %v\n", path, err)
 		return err
 	}
 
@@ -114,15 +125,12 @@ func (b *builder) BuildFile(path string) error {
 	return nil
 }
 
+// prepareWebBuild prepares the output directory for web content.
 func (b *builder) prepareWebBuild() {
-	err := b.templateCache.LoadTemplates()
-	if err != nil {
-		log.Fatalf("[Builder] unable to load templates: %v", err)
-	}
-
 	b.prepareOutputDir(b.Config.WebOutputDir)
 }
 
+// prepareGeminiBuild prepares the output directory for gemini content.
 func (b *builder) prepareGeminiBuild() {
 	b.prepareOutputDir(b.Config.GeminiOutputDir)
 }
@@ -141,6 +149,7 @@ func (b *builder) prepareOutputDir(dir string) error {
 	return nil
 }
 
+// createWalkFunc returns a function that is used to walk the markdown directory.
 func (b *builder) createWalkFunc() func(string, os.FileInfo, error) error {
 	return func(path string, info os.FileInfo, err error) error {
 		if err != nil {

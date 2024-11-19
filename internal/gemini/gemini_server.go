@@ -49,6 +49,7 @@ func (s *GeminiServer) Start() error {
 	mux.HandleFunc("/", s.getGeminiPage)
 	server.Handler = gemini.LoggingMiddleware(&mux)
 
+	log.Println("gemini server listening on port:", s.Config.Port)
 	err = server.ListenAndServe(context.Background())
 	if err != nil {
 		log.Fatal(err)
