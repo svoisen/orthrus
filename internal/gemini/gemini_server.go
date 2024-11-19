@@ -38,7 +38,7 @@ func (s *GeminiServer) Start() error {
 
 	err := s.Certificates.Load(s.Config.CertStore)
 	if err != nil {
-		log.Fatalf("unable to load certificate %w", err)
+		log.Fatalf("unable to load certificate")
 	}
 
 	s.Certificates.Register("*." + s.Config.HostName)
