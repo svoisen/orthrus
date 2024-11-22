@@ -1,4 +1,4 @@
-package build
+package web
 
 import (
 	"fmt"
@@ -48,6 +48,7 @@ func getFuncMap() template.FuncMap {
 	}
 }
 
+// LoadTemplates loads all templates from the template directory
 func (t *TemplateCache) LoadTemplates() error {
 	t.cacheLock.Lock()
 	defer t.cacheLock.Unlock()
@@ -81,11 +82,6 @@ func (t *TemplateCache) loadTemplatesInternal() error {
 		// Get the template name without extension and templates/ prefix
 		name := strings.TrimSuffix(filepath.Base(path), ".tmpl")
 
-		// Parse the base template first
-		// tmpl := template.New(t.templateRoot + "/base.tmpl").Funcs(getFuncMap())
-
-		// Parse all remaining templates
-		// tmpl, err = tmpl.ParseGlob(filepath.Join(t.templateRoot, "*.tmpl"))
 		tmpl, err := template.New(name).Funcs(getFuncMap()).ParseFiles(path)
 		if err != nil {
 			return fmt.Errorf("error parsing templates: %w", err)

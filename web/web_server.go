@@ -2,7 +2,6 @@ package web
 
 import (
 	"fmt"
-	"log"
 	"net/http"
 )
 
@@ -24,7 +23,7 @@ func NewWebServer(cfg WebServerConfig) *WebServer {
 }
 
 func (s *WebServer) Start() error {
-	log.Println("web server listening on port:", s.Config.Port)
+	fmt.Println("web server listening on port:", s.Config.Port)
 	address := fmt.Sprintf("localhost: %v", s.Config.Port)
 	http.Handle("/", http.FileServer(http.Dir(s.Config.ContentDir)))
 	if err := http.ListenAndServe(address, nil); err != nil {

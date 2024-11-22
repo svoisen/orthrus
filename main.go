@@ -3,10 +3,10 @@ package main
 import (
 	"flag"
 	"fmt"
-	"ibeji/internal/build"
-	"ibeji/internal/config"
-	"ibeji/internal/gemini"
-	"ibeji/internal/web"
+	"ibeji/builder"
+	"ibeji/config"
+	"ibeji/gemini"
+	"ibeji/web"
 	"os"
 	"sync"
 
@@ -110,8 +110,8 @@ func watchMarkdownDir(cfg config.Config) {
 	<-done
 }
 
-func createBuilder(cfg config.Config) build.Builder {
-	builderCfg := build.BuilderConfig{
+func createBuilder(cfg config.Config) builder.Builder {
+	builderCfg := builder.BuilderConfig{
 		AssetsDir:       cfg.WebAssetsDir,
 		TemplateDir:     cfg.WebTemplateDir,
 		MarkdownDir:     cfg.MarkdownDir,
@@ -121,7 +121,7 @@ func createBuilder(cfg config.Config) build.Builder {
 		BuildGemini:     true,
 		PrintAst:        false,
 	}
-	return build.NewBuilder(builderCfg)
+	return builder.NewBuilder(builderCfg)
 }
 
 func runGeminiServer(cfg config.Config) {

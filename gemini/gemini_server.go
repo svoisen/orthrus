@@ -6,7 +6,7 @@ import (
 	"os"
 	"time"
 
-	gemini "git.sr.ht/~adnano/go-gemini"
+	"git.sr.ht/~adnano/go-gemini"
 	"git.sr.ht/~adnano/go-gemini/certificate"
 )
 
@@ -30,6 +30,7 @@ func NewGeminiServer(cfg GeminiServerConfig) *GeminiServer {
 	return server
 }
 
+// Start starts the Gemini server
 func (s *GeminiServer) Start() error {
 	var server gemini.Server
 	server.ReadTimeout = 1 * time.Minute
@@ -60,6 +61,5 @@ func (s *GeminiServer) Start() error {
 }
 
 func (s *GeminiServer) getGeminiPage(_ context.Context, w gemini.ResponseWriter, r *gemini.Request) {
-	fmt.Println("serving page")
-	gemini.ServeFile(w, os.DirFS(s.Config.ContentDir), "index.gmi")
+	gemini.ServeFile(w, os.DirFS(s.Config.ContentDir), r.URL.Path)
 }

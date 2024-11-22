@@ -1,9 +1,10 @@
-package build
+package builder
 
 import (
 	"bytes"
 	"fmt"
-	"ibeji/internal/file"
+	"ibeji/file"
+	"ibeji/web"
 	"log"
 	"os"
 	"path/filepath"
@@ -34,7 +35,7 @@ type TemplateData struct {
 
 type builder struct {
 	Config        BuilderConfig
-	templateCache *TemplateCache
+	templateCache *web.TemplateCache
 }
 
 type Builder interface {
@@ -43,11 +44,11 @@ type Builder interface {
 }
 
 func NewBuilder(c BuilderConfig) Builder {
-	templateCacheCfg := TemplateCacheConfig{
+	templateCacheCfg := web.TemplateCacheConfig{
 		Development: true,
 		TemplateDir: c.TemplateDir,
 	}
-	templateCache := NewTemplateCache(templateCacheCfg)
+	templateCache := web.NewTemplateCache(templateCacheCfg)
 	err := templateCache.LoadTemplates()
 	if err != nil {
 		fmt.Printf("unable to load templates: %v", err)
