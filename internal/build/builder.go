@@ -11,12 +11,9 @@ import (
 
 	gem "git.sr.ht/~kota/goldmark-gemtext"
 	wiki "git.sr.ht/~kota/goldmark-wiki"
-	"github.com/gomarkdown/markdown"
-	"github.com/gomarkdown/markdown/ast"
-	"github.com/gomarkdown/markdown/html"
-	"github.com/gomarkdown/markdown/parser"
 	"github.com/yuin/goldmark"
 	"github.com/yuin/goldmark/extension"
+	"go.abhg.dev/goldmark/wikilink"
 )
 
 type BuilderConfig struct {
@@ -37,8 +34,6 @@ type TemplateData struct {
 
 type builder struct {
 	Config        BuilderConfig
-	parser        *parser.Parser
-	htmlRenderer  *html.Renderer
 	templateCache *TemplateCache
 }
 
@@ -48,15 +43,6 @@ type Builder interface {
 }
 
 func NewBuilder(c BuilderConfig) Builder {
-	extensions := parser.CommonExtensions | parser.AutoHeadingIDs | parser.NoEmptyLineBeforeBlock
-	parser := parser.NewWithExtensions(extensions)
-
-	// @TODO: there is really no reason to load the template cache
-	// and parser if we are not building HTML
-	htmlFlags := html.CommonFlags
-	htmlRendererOptions := html.RendererOptions{Flags: htmlFlags}
-	htmlRenderer := html.NewRenderer(htmlRendererOptions)
-
 	templateCacheCfg := TemplateCacheConfig{
 		Development: true,
 		TemplateDir: c.TemplateDir,
@@ -70,8 +56,6 @@ func NewBuilder(c BuilderConfig) Builder {
 
 	builder := &builder{
 		Config:        c,
-		parser:        parser,
-		htmlRenderer:  htmlRenderer,
 		templateCache: templateCache,
 	}
 
@@ -167,24 +151,33 @@ func (b *builder) createWalkFunc() func(string, os.FileInfo, error) error {
 
 func (b *builder) outputHTML(contents []byte, filename string) error {
 	fmt.Println("converting markdown to HTML:", filename)
-	renderedMarkdown, err := b.markdownToHTML(contents)
-	if err != nil {
-		log.Println("[Builder] failed to convert markdown to HTML:", err)
+
+	md := goldmark.New(
+		goldmark.WithExtensions(
+			&wikilink.Extender{},
+			extension.Linkify,
+			extension.Strikethrough,
+		),
+	)
+
+	var buf bytes.Buffer
+	if err := md.Convert(contents, &buf); err != nil {
+		fmt.Println("could not convert markdown to HTML:", err)
 		return err
 	}
 
 	data := TemplateData{
 		Title:   "Fix Me",
-		Content: renderedMarkdown,
+		Content: buf.Bytes(),
 	}
 	renderedHTML, err := b.templateCache.Render("base", data)
 	if err != nil {
-		log.Println("[Builder] error rendering template:", err)
+		fmt.Println("could not render template:", err)
 		return err
 	}
 
 	outputPath := b.Config.WebOutputDir + "/" + filename + ".html"
-	log.Printf("[Builder] writing to file %v\n", outputPath)
+	fmt.Println("writing to file:", outputPath)
 	os.WriteFile(outputPath, []byte(renderedHTML), 0644)
 
 	return nil
@@ -208,23 +201,13 @@ func (b *builder) outputGemtext(contents []byte, filename string) error {
 	md.SetRenderer(gem.New(opts...))
 	fmt.Println("converting markdown to gemtext:", filename)
 	if err := md.Convert(contents, &buf); err != nil {
-		log.Printf("[Builder] failed to convert markdown to gemtext: %v\n", err)
+		fmt.Println("failed to convert markdown to gemtext", err)
 		return err
 	}
 
 	outputPath := b.Config.GeminiOutputDir + "/" + filename + ".gmi"
-	log.Printf("[Builder] writing to file %v\n", outputPath)
+	fmt.Println("writing to file:", outputPath)
 	os.WriteFile(outputPath, buf.Bytes(), 0644)
 
 	return nil
-}
-
-func (b *builder) markdownToHTML(input []byte) ([]byte, error) {
-	doc := b.parser.Parse(input)
-
-	if b.Config.PrintAst {
-		ast.Print(os.Stdout, doc)
-	}
-
-	return markdown.Render(doc, b.htmlRenderer), nil
 }
