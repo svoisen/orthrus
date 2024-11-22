@@ -3,7 +3,6 @@ package gemini
 import (
 	"context"
 	"fmt"
-	"log"
 	"os"
 	"time"
 
@@ -38,7 +37,8 @@ func (s *GeminiServer) Start() error {
 
 	err := s.Certificates.Load(s.Config.CertStore)
 	if err != nil {
-		log.Fatalf("unable to load certificate")
+		fmt.Println("unable to load certificate:", err)
+		return err
 	}
 
 	s.Certificates.Register("*." + s.Config.HostName)
@@ -49,10 +49,11 @@ func (s *GeminiServer) Start() error {
 	mux.HandleFunc("/", s.getGeminiPage)
 	server.Handler = gemini.LoggingMiddleware(&mux)
 
-	log.Println("gemini server listening on port:", s.Config.Port)
+	fmt.Println("gemini server listening on port:", s.Config.Port)
 	err = server.ListenAndServe(context.Background())
 	if err != nil {
-		log.Fatal(err)
+		fmt.Println("error starting gemini server", err)
+		return err
 	}
 
 	return nil

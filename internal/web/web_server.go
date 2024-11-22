@@ -23,11 +23,13 @@ func NewWebServer(cfg WebServerConfig) *WebServer {
 	return server
 }
 
-func (s *WebServer) Start() {
+func (s *WebServer) Start() error {
 	log.Println("web server listening on port:", s.Config.Port)
 	address := fmt.Sprintf("localhost: %v", s.Config.Port)
 	http.Handle("/", http.FileServer(http.Dir(s.Config.ContentDir)))
 	if err := http.ListenAndServe(address, nil); err != nil {
-		log.Fatal(err)
+		return err
 	}
+
+	return nil
 }

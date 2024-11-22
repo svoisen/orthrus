@@ -91,7 +91,8 @@ func (b *builder) BuildAll() error {
 
 	err := filepath.Walk(b.Config.MarkdownDir, b.createWalkFunc())
 	if err != nil {
-		log.Fatalf("[Builder] could not complete markdown conversion: %v\n", err)
+		fmt.Println("could not complete markdown conversion", err)
+		os.Exit(1)
 	}
 
 	return nil
@@ -165,7 +166,7 @@ func (b *builder) createWalkFunc() func(string, os.FileInfo, error) error {
 }
 
 func (b *builder) outputHTML(contents []byte, filename string) error {
-	log.Println("[Builder] converting markdown to HTML:", filename)
+	fmt.Println("converting markdown to HTML:", filename)
 	renderedMarkdown, err := b.markdownToHTML(contents)
 	if err != nil {
 		log.Println("[Builder] failed to convert markdown to HTML:", err)
@@ -205,6 +206,7 @@ func (b *builder) outputGemtext(contents []byte, filename string) error {
 	}
 	var buf bytes.Buffer
 	md.SetRenderer(gem.New(opts...))
+	fmt.Println("converting markdown to gemtext:", filename)
 	if err := md.Convert(contents, &buf); err != nil {
 		log.Printf("[Builder] failed to convert markdown to gemtext: %v\n", err)
 		return err

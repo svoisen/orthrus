@@ -79,14 +79,14 @@ func (t *TemplateCache) loadTemplatesInternal() error {
 		t.lastModTime[path] = info.ModTime()
 
 		// Get the template name without extension and templates/ prefix
-		name := strings.TrimPrefix(path, t.templateRoot+"/")
-		name = strings.TrimSuffix(name, ".tmpl")
+		name := strings.TrimSuffix(filepath.Base(path), ".tmpl")
 
 		// Parse the base template first
-		tmpl := template.New("base.tmpl").Funcs(getFuncMap())
+		// tmpl := template.New(t.templateRoot + "/base.tmpl").Funcs(getFuncMap())
 
 		// Parse all remaining templates
-		tmpl, err = tmpl.ParseGlob(filepath.Join(t.templateRoot, "*.tmpl"))
+		// tmpl, err = tmpl.ParseGlob(filepath.Join(t.templateRoot, "*.tmpl"))
+		tmpl, err := template.New(name).Funcs(getFuncMap()).ParseFiles(path)
 		if err != nil {
 			return fmt.Errorf("error parsing templates: %w", err)
 		}
