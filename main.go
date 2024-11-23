@@ -8,6 +8,7 @@ import (
 	"ibeji/gemini"
 	"ibeji/web"
 	"os"
+	"path/filepath"
 	"sync"
 
 	"github.com/fsnotify/fsnotify"
@@ -49,7 +50,7 @@ func main() {
 		wg := new(sync.WaitGroup)
 		wg.Add(3)
 		go func() {
-			watchMarkdownDir(cfg)
+			watchDirs(cfg)
 			wg.Done()
 		}()
 		go func() {
@@ -68,8 +69,7 @@ func main() {
 	}
 }
 
-func watchMarkdownDir(cfg config.Config) {
-	fmt.Println("watching markdown directory:", cfg.MarkdownDir)
+func watchDirs(cfg config.Config) {
 	watcher, err := fsnotify.NewWatcher()
 	if err != nil {
 		fmt.Println("could not create watcher:", err)
@@ -91,7 +91,11 @@ func watchMarkdownDir(cfg config.Config) {
 
 				if event.Op&fsnotify.Write == fsnotify.Write {
 					fmt.Println("detected modified file:", event.Name)
-					builder.BuildFile(event.Name)
+					if filepath.Ext(event.Name) == ".tmpl" {
+						builder.BuildAll()
+					} else {
+						builder.BuildFile(event.Name)
+					}
 				}
 			case err, ok := <-watcher.Errors:
 				if !ok {
@@ -102,10 +106,14 @@ func watchMarkdownDir(cfg config.Config) {
 		}
 	}()
 
-	err = watcher.Add(cfg.MarkdownDir)
-	if err != nil {
-		fmt.Println("could not watch directory", err)
-		os.Exit(1)
+	dirs := []string{cfg.MarkdownDir, cfg.WebTemplateDir}
+	for _, dir := range dirs {
+		fmt.Println("watching directory:", dir)
+		err = watcher.Add(dir)
+		if err != nil {
+			fmt.Println("could not watch directory", err)
+			os.Exit(1)
+		}
 	}
 	<-done
 }

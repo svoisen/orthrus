@@ -4,16 +4,19 @@ import (
 	"bytes"
 	"fmt"
 	"ibeji/file"
+	"ibeji/gemini"
 	"ibeji/web"
 	"log"
 	"os"
 	"path/filepath"
 	"strings"
 
-	gem "git.sr.ht/~kota/goldmark-gemtext"
+	gemtext "git.sr.ht/~kota/goldmark-gemtext"
 	wiki "git.sr.ht/~kota/goldmark-wiki"
 	"github.com/yuin/goldmark"
+	"github.com/yuin/goldmark/ast"
 	"github.com/yuin/goldmark/extension"
+	"github.com/yuin/goldmark/text"
 	"go.abhg.dev/goldmark/wikilink"
 )
 
@@ -29,8 +32,9 @@ type BuilderConfig struct {
 }
 
 type TemplateData struct {
-	Title   string
-	Content []byte
+	Title    string
+	Content  []byte
+	Filename string
 }
 
 type builder struct {
@@ -67,11 +71,11 @@ func NewBuilder(c BuilderConfig) Builder {
 // after clearing the output directories.
 func (b *builder) BuildAll() error {
 	if b.Config.BuildWeb {
-		b.prepareWebBuild()
+		prepareOutputDir(b.Config.WebOutputDir)
 	}
 
 	if b.Config.BuildGemini {
-		b.prepareGeminiBuild()
+		prepareOutputDir(b.Config.GeminiOutputDir)
 	}
 
 	err := filepath.Walk(b.Config.MarkdownDir, b.createWalkFunc())
@@ -88,13 +92,13 @@ func (b *builder) BuildFile(path string) error {
 	ext := strings.ToLower(filepath.Ext(path))
 
 	if ext != ".md" && ext != ".markdown" {
-		log.Printf("skipping file %v, not a markdown file\n", path)
+		fmt.Printf("skipping file %v, not a markdown file\n", path)
 		return nil
 	}
 
 	fileContents, err := os.ReadFile(path)
 	if err != nil {
-		log.Printf("unable to read file %v: %v\n", path, err)
+		fmt.Println("unable to read file:", path)
 		return err
 	}
 
@@ -111,25 +115,17 @@ func (b *builder) BuildFile(path string) error {
 	return nil
 }
 
-// prepareWebBuild prepares the output directory for web content.
-func (b *builder) prepareWebBuild() {
-	b.prepareOutputDir(b.Config.WebOutputDir)
-}
-
-// prepareGeminiBuild prepares the output directory for gemini content.
-func (b *builder) prepareGeminiBuild() {
-	b.prepareOutputDir(b.Config.GeminiOutputDir)
-}
-
-func (b *builder) prepareOutputDir(dir string) error {
+func prepareOutputDir(dir string) error {
 	err := file.RemoveIfExists(dir)
 	if err != nil {
-		log.Fatalf("[Builder] unable to purge existing output dir: %v: %v", dir, err)
+		fmt.Printf("unable to purge existing output dir: %v: %v\n", dir, err)
+		os.Exit(1)
 	}
 
 	err = os.MkdirAll(dir, 0755)
 	if err != nil {
-		log.Fatalf("[Builder] could not create output directory: %v: %v\n", dir, err)
+		fmt.Printf("could not create output directory: %v: %v\n", dir, err)
+		os.Exit(1)
 	}
 
 	return nil
@@ -151,25 +147,34 @@ func (b *builder) createWalkFunc() func(string, os.FileInfo, error) error {
 }
 
 func (b *builder) outputHTML(contents []byte, filename string) error {
-	fmt.Println("converting markdown to HTML:", filename)
-
 	md := goldmark.New(
 		goldmark.WithExtensions(
-			&wikilink.Extender{},
+			&wikilink.Extender{
+				Resolver: web.WikilinkResolver{},
+			},
 			extension.Linkify,
 			extension.Strikethrough,
+			extension.Typographer,
 		),
 	)
-
 	var buf bytes.Buffer
-	if err := md.Convert(contents, &buf); err != nil {
+	reader := text.NewReader(contents)
+	doc := md.Parser().Parse(reader)
+	title, err := getTitle(doc, contents)
+	if err != nil {
+		fmt.Println("[WARN] could not get title for doc:", filename)
+	}
+
+	if err := md.Renderer().Render(&buf, contents, doc); err != nil {
 		fmt.Println("could not convert markdown to HTML:", err)
 		return err
 	}
 
+	outputFilename := transformFilename(filename)
 	data := TemplateData{
-		Title:   "Fix Me",
-		Content: buf.Bytes(),
+		Title:    title,
+		Content:  buf.Bytes(),
+		Filename: outputFilename,
 	}
 	renderedHTML, err := b.templateCache.Render("base", data)
 	if err != nil {
@@ -177,8 +182,8 @@ func (b *builder) outputHTML(contents []byte, filename string) error {
 		return err
 	}
 
-	outputPath := b.Config.WebOutputDir + "/" + filename + ".html"
-	fmt.Println("writing to file:", outputPath)
+	outputPath := b.Config.WebOutputDir + "/" + outputFilename + ".html"
+	fmt.Println("writing file:", outputPath)
 	os.WriteFile(outputPath, []byte(renderedHTML), 0644)
 
 	return nil
@@ -193,22 +198,56 @@ func (b *builder) outputGemtext(contents []byte, filename string) error {
 		),
 	)
 
-	opts := []gem.Option{
-		gem.WithHeadingLink(gem.HeadingLinkAuto),
-		gem.WithParagraphLink(gem.ParagraphLinkOff),
-		gem.WithListLink(gem.ListLinkAuto),
+	opts := []gemtext.Option{
+		gemtext.WithHeadingLink(gemtext.HeadingLinkAuto),
+		gemtext.WithParagraphLink(gemtext.ParagraphLinkOff),
+		gemtext.WithListLink(gemtext.ListLinkAuto),
+		gemtext.WithLinkReplacers([]gemtext.LinkReplacer{gemini.WikilinkReplacer}),
 	}
 	var buf bytes.Buffer
-	md.SetRenderer(gem.New(opts...))
-	fmt.Println("converting markdown to gemtext:", filename)
+	md.SetRenderer(gemtext.New(opts...))
 	if err := md.Convert(contents, &buf); err != nil {
 		fmt.Println("failed to convert markdown to gemtext", err)
 		return err
 	}
 
-	outputPath := b.Config.GeminiOutputDir + "/" + filename + ".gmi"
-	fmt.Println("writing to file:", outputPath)
+	outputPath := b.Config.GeminiOutputDir + "/" + transformFilename(filename) + ".gmi"
+	fmt.Println("writing file:", outputPath)
 	os.WriteFile(outputPath, buf.Bytes(), 0644)
 
 	return nil
+}
+
+func transformFilename(filename string) string {
+	return strings.ReplaceAll(strings.ToLower(filename), " ", "-")
+}
+
+// getTitle returns the first heading in the document if found, or the empty
+// string otherwise.
+func getTitle(doc ast.Node, markdown []byte) (string, error) {
+	var firstHeading string
+	ast.Walk(doc, func(n ast.Node, entering bool) (ast.WalkStatus, error) {
+		if heading, ok := n.(*ast.Heading); ok && entering {
+			if heading.Level != 1 {
+				return ast.WalkSkipChildren, nil
+			}
+
+			var buf bytes.Buffer
+			for chld := heading.FirstChild(); chld != nil; chld = chld.NextSibling() {
+				if text, ok := chld.(*ast.Text); ok {
+					buf.Write(text.Segment.Value(markdown))
+				}
+			}
+			firstHeading = buf.String()
+			return ast.WalkStop, nil
+		}
+
+		return ast.WalkContinue, nil
+	})
+
+	if firstHeading == "" {
+		return "", fmt.Errorf("no heading found")
+	}
+
+	return firstHeading, nil
 }
