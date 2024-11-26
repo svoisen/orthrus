@@ -10,6 +10,7 @@ type Config struct {
 	WebAssetsDir    string
 	WebTemplateDir  string
 	WebOutputDir    string
+	GeminiFooter    string
 }
 
 func GetConfig(filename string) (Config, error) {

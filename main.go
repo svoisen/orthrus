@@ -125,6 +125,7 @@ func createBuilder(cfg config.Config) builder.Builder {
 		MarkdownDir:     cfg.MarkdownDir,
 		WebOutputDir:    cfg.WebOutputDir,
 		GeminiOutputDir: cfg.GeminiOutputDir,
+		GeminiFooter:    cfg.GeminiFooter,
 		BuildWeb:        true,
 		BuildGemini:     true,
 		PrintAst:        false,

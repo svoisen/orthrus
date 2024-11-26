@@ -16,6 +16,9 @@ require (
 
 require (
 	git.sr.ht/~kota/fuckery v0.2.0 // indirect
+	github.com/alecthomas/chroma v0.10.0 // indirect
+	github.com/dlclark/regexp2 v1.4.0 // indirect
+	github.com/yuin/goldmark-highlighting v0.0.0-20220208100518-594be1970594 // indirect
 	golang.org/x/net v0.25.0 // indirect
 	golang.org/x/sys v0.20.0 // indirect
 	golang.org/x/text v0.15.0 // indirect

@@ -14,6 +14,7 @@ import (
 	gemtext "git.sr.ht/~kota/goldmark-gemtext"
 	wiki "git.sr.ht/~kota/goldmark-wiki"
 	"github.com/yuin/goldmark"
+	highlighting "github.com/yuin/goldmark-highlighting"
 	"github.com/yuin/goldmark/ast"
 	"github.com/yuin/goldmark/extension"
 	"github.com/yuin/goldmark/text"
@@ -29,6 +30,7 @@ type BuilderConfig struct {
 	WebOutputDir    string
 	GeminiOutputDir string
 	PrintAst        bool
+	GeminiFooter    string
 }
 
 type TemplateData struct {
@@ -149,6 +151,9 @@ func (b *builder) createWalkFunc() func(string, os.FileInfo, error) error {
 func (b *builder) outputHTML(contents []byte, filename string) error {
 	md := goldmark.New(
 		goldmark.WithExtensions(
+			highlighting.NewHighlighting(
+				highlighting.WithStyle("dracula"),
+			),
 			&wikilink.Extender{
 				Resolver: web.WikilinkResolver{},
 			},
@@ -200,10 +205,14 @@ func (b *builder) outputGemtext(contents []byte, filename string) error {
 
 	opts := []gemtext.Option{
 		gemtext.WithHeadingLink(gemtext.HeadingLinkAuto),
+		gemtext.WithHeadingSpace(gemtext.HeadingSpaceSingle),
 		gemtext.WithParagraphLink(gemtext.ParagraphLinkOff),
 		gemtext.WithListLink(gemtext.ListLinkAuto),
 		gemtext.WithLinkReplacers([]gemtext.LinkReplacer{gemini.WikilinkReplacer}),
 	}
+
+	footer := []byte("\n\n" + b.Config.GeminiFooter)
+	contents = append(contents, footer...)
 	var buf bytes.Buffer
 	md.SetRenderer(gemtext.New(opts...))
 	if err := md.Convert(contents, &buf); err != nil {
