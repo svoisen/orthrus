@@ -5,6 +5,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 )
 
@@ -27,6 +28,43 @@ func Copy(src string, dest string) error {
 	}
 
 	return out.Close()
+}
+
+// CopyDir copies a directory from src to dest
+func CopyDir(src string, dst string) error {
+	files, err := os.ReadDir(src)
+	if err != nil {
+		return err
+	}
+
+	for _, file := range files {
+		srcPath := filepath.Join(src, file.Name())
+		dstPath := filepath.Join(dst, file.Name())
+
+		if file.IsDir() {
+			err := os.MkdirAll(dstPath, os.ModePerm)
+			if err != nil {
+				return err
+			}
+			err = CopyDir(srcPath, dstPath)
+			if err != nil {
+				return err
+			}
+		} else {
+			err := Copy(srcPath, dstPath)
+			if err != nil {
+				return err
+			}
+		}
+	}
+
+	return nil
+}
+
+func IsDatePrefixed(filename string) bool {
+	base := filepath.Base(filename)
+	re := regexp.MustCompile(`^\d{4}-\d{2}-\d{2}`)
+	return re.MatchString(base)
 }
 
 // RemoveIfExists removes a file or directory if it exists
