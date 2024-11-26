@@ -6,7 +6,6 @@ import (
 	"ibeji/file"
 	"ibeji/gemini"
 	"ibeji/web"
-	"log"
 	"os"
 	"path/filepath"
 	"strings"
@@ -137,7 +136,8 @@ func prepareOutputDir(dir string) error {
 func (b *builder) createWalkFunc() func(string, os.FileInfo, error) error {
 	return func(path string, info os.FileInfo, err error) error {
 		if err != nil {
-			log.Fatalf("[Builder] error walking directory: %v\n", err)
+			fmt.Println("error walking directory:", err)
+			os.Exit(1)
 		}
 
 		if info.IsDir() {
