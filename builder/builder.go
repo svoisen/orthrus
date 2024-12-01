@@ -3,6 +3,7 @@ package builder
 import (
 	"bytes"
 	"fmt"
+	"ibeji/config"
 	"ibeji/file"
 	"ibeji/gemini"
 	"ibeji/web"
@@ -20,18 +21,6 @@ import (
 	"go.abhg.dev/goldmark/wikilink"
 )
 
-type BuilderConfig struct {
-	BuildWeb        bool
-	BuildGemini     bool
-	AssetsDir       string
-	TemplateDir     string
-	MarkdownDir     string
-	WebOutputDir    string
-	GeminiOutputDir string
-	PrintAst        bool
-	GeminiFooter    string
-}
-
 type TemplateData struct {
 	Title    string
 	Content  []byte
@@ -39,7 +28,7 @@ type TemplateData struct {
 }
 
 type builder struct {
-	Config        BuilderConfig
+	Config        config.Config
 	templateCache *web.TemplateCache
 }
 
@@ -48,10 +37,10 @@ type Builder interface {
 	BuildFile(path string) error
 }
 
-func NewBuilder(c BuilderConfig) Builder {
+func NewBuilder(c config.Config) Builder {
 	templateCacheCfg := web.TemplateCacheConfig{
 		Development: true,
-		TemplateDir: c.TemplateDir,
+		TemplateDir: c.Web.TemplateDir,
 	}
 	templateCache := web.NewTemplateCache(templateCacheCfg)
 	err := templateCache.LoadTemplates()
@@ -71,15 +60,16 @@ func NewBuilder(c BuilderConfig) Builder {
 // BuildAll walks the markdown directory and builds all markdown files
 // after clearing the output directories.
 func (b *builder) BuildAll() error {
-	if b.Config.BuildWeb {
-		prepareOutputDir(b.Config.WebOutputDir)
+	if b.Config.Web.Enabled {
+		prepareOutputDir(b.Config.Web.OutputDir)
+		b.copyWebAssets()
 	}
 
-	if b.Config.BuildGemini {
-		prepareOutputDir(b.Config.GeminiOutputDir)
+	if b.Config.Gemini.Enabled {
+		prepareOutputDir(b.Config.Gemini.OutputDir)
 	}
 
-	err := filepath.Walk(b.Config.MarkdownDir, b.createWalkFunc())
+	err := filepath.Walk(b.Config.Content.ContentDir, b.createWalkFunc())
 	if err != nil {
 		fmt.Println("could not complete markdown conversion", err)
 		os.Exit(1)
@@ -105,11 +95,14 @@ func (b *builder) BuildFile(path string) error {
 
 	filename := file.Basename(path)
 
-	if b.Config.BuildWeb {
-		b.outputHTML(fileContents, filename)
+	if b.Config.Web.Enabled {
+		if err := b.outputHTML(fileContents, filename); err != nil {
+			fmt.Printf("could not output HTML for file %v: %v", filename, err)
+			return err
+		}
 	}
 
-	if b.Config.BuildGemini {
+	if b.Config.Gemini.Enabled {
 		b.outputGemtext(fileContents, filename)
 	}
 
@@ -137,15 +130,23 @@ func (b *builder) createWalkFunc() func(string, os.FileInfo, error) error {
 	return func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			fmt.Println("error walking directory:", err)
-			os.Exit(1)
+			return err
 		}
 
 		if info.IsDir() {
 			return nil
 		}
 
+		if file.IsDatePrefixed(path) {
+			// Add file to collection
+		}
+
 		return b.BuildFile(path)
 	}
+}
+
+func (b *builder) copyWebAssets() error {
+	return file.CopyDir(b.Config.Web.AssetsDir, b.Config.Web.OutputDir)
 }
 
 func (b *builder) outputHTML(contents []byte, filename string) error {
@@ -175,7 +176,7 @@ func (b *builder) outputHTML(contents []byte, filename string) error {
 		return err
 	}
 
-	outputFilename := transformFilename(filename)
+	outputFilename := normalizeFilename(filename)
 	data := TemplateData{
 		Title:    title,
 		Content:  buf.Bytes(),
@@ -187,7 +188,7 @@ func (b *builder) outputHTML(contents []byte, filename string) error {
 		return err
 	}
 
-	outputPath := b.Config.WebOutputDir + "/" + outputFilename + ".html"
+	outputPath := b.Config.Web.OutputDir + "/" + outputFilename + ".html"
 	fmt.Println("writing file:", outputPath)
 	os.WriteFile(outputPath, []byte(renderedHTML), 0644)
 
@@ -211,8 +212,6 @@ func (b *builder) outputGemtext(contents []byte, filename string) error {
 		gemtext.WithLinkReplacers([]gemtext.LinkReplacer{gemini.WikilinkReplacer}),
 	}
 
-	footer := []byte("\n\n" + b.Config.GeminiFooter)
-	contents = append(contents, footer...)
 	var buf bytes.Buffer
 	md.SetRenderer(gemtext.New(opts...))
 	if err := md.Convert(contents, &buf); err != nil {
@@ -220,14 +219,14 @@ func (b *builder) outputGemtext(contents []byte, filename string) error {
 		return err
 	}
 
-	outputPath := b.Config.GeminiOutputDir + "/" + transformFilename(filename) + ".gmi"
+	outputPath := b.Config.Gemini.OutputDir + "/" + normalizeFilename(filename) + ".gmi"
 	fmt.Println("writing file:", outputPath)
 	os.WriteFile(outputPath, buf.Bytes(), 0644)
 
 	return nil
 }
 
-func transformFilename(filename string) string {
+func normalizeFilename(filename string) string {
 	return strings.ReplaceAll(strings.ToLower(filename), " ", "-")
 }
 

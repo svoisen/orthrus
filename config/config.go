@@ -2,15 +2,39 @@ package config
 
 import "github.com/BurntSushi/toml"
 
+// Stream represents configuration information for a stream of posts.
+type Stream struct {
+	Name       string
+	Slug       string
+	ContentDir string
+}
+
+type ContentConfig struct {
+	Wikilinks  bool
+	ContentDir string
+}
+
+type WebConfig struct {
+	Enabled     bool
+	Port        int
+	TemplateDir string
+	AssetsDir   string
+	OutputDir   string
+}
+
+type GeminiConfig struct {
+	Enabled   bool
+	Hostname  string
+	Port      int
+	CertStore string
+	OutputDir string
+}
+
 type Config struct {
-	MarkdownDir     string
-	HostName        string
-	GeminiCertStore string
-	GeminiOutputDir string
-	WebAssetsDir    string
-	WebTemplateDir  string
-	WebOutputDir    string
-	GeminiFooter    string
+	Content ContentConfig
+	Web     WebConfig
+	Gemini  GeminiConfig
+	Streams []Stream
 }
 
 func GetConfig(filename string) (Config, error) {

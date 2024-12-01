@@ -2,19 +2,16 @@ package web
 
 import (
 	"fmt"
+	"ibeji/config"
 	"net/http"
 )
 
-type WebServerConfig struct {
-	ContentDir string
-	Port       int
-}
-
 type WebServer struct {
-	Config WebServerConfig
+	Config config.WebConfig
 }
 
-func NewWebServer(cfg WebServerConfig) *WebServer {
+// NewWebServer creates a new web server
+func NewWebServer(cfg config.WebConfig) *WebServer {
 	server := &WebServer{
 		Config: cfg,
 	}
@@ -22,10 +19,12 @@ func NewWebServer(cfg WebServerConfig) *WebServer {
 	return server
 }
 
+// Start starts the web server
 func (s *WebServer) Start() error {
 	fmt.Println("web server listening on port:", s.Config.Port)
+
 	address := fmt.Sprintf("localhost: %v", s.Config.Port)
-	http.Handle("/", http.FileServer(http.Dir(s.Config.ContentDir)))
+	http.Handle("/", http.FileServer(http.Dir(s.Config.OutputDir)))
 	if err := http.ListenAndServe(address, nil); err != nil {
 		return err
 	}

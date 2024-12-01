@@ -3,6 +3,8 @@ package gemini
 import (
 	"context"
 	"fmt"
+	"ibeji/config"
+	"log"
 	"os"
 	"time"
 
@@ -10,19 +12,12 @@ import (
 	"git.sr.ht/~adnano/go-gemini/certificate"
 )
 
-type GeminiServerConfig struct {
-	ContentDir string
-	HostName   string
-	CertStore  string
-	Port       int
-}
-
 type GeminiServer struct {
-	Config       GeminiServerConfig
+	Config       config.GeminiConfig
 	Certificates certificate.Store
 }
 
-func NewGeminiServer(cfg GeminiServerConfig) *GeminiServer {
+func NewGeminiServer(cfg config.GeminiConfig) *GeminiServer {
 	server := &GeminiServer{
 		Config: cfg,
 	}
@@ -42,15 +37,15 @@ func (s *GeminiServer) Start() error {
 		return err
 	}
 
-	s.Certificates.Register("*." + s.Config.HostName)
-	s.Certificates.Register(s.Config.HostName)
+	s.Certificates.Register("*." + s.Config.Hostname)
+	s.Certificates.Register(s.Config.Hostname)
 	server.GetCertificate = s.Certificates.Get
 
 	var mux gemini.Mux
 	mux.HandleFunc("/", s.getGeminiPage)
 	server.Handler = gemini.LoggingMiddleware(&mux)
 
-	fmt.Println("gemini server listening on port:", s.Config.Port)
+	log.Println("gemini server listening on port:", s.Config.Port)
 	err = server.ListenAndServe(context.Background())
 	if err != nil {
 		fmt.Println("error starting gemini server", err)
@@ -60,6 +55,7 @@ func (s *GeminiServer) Start() error {
 	return nil
 }
 
+// getGeminiPage acts as the handler function for all gemini requests
 func (s *GeminiServer) getGeminiPage(_ context.Context, w gemini.ResponseWriter, r *gemini.Request) {
-	gemini.ServeFile(w, os.DirFS(s.Config.ContentDir), r.URL.Path)
+	gemini.ServeFile(w, os.DirFS(s.Config.OutputDir), r.URL.Path)
 }

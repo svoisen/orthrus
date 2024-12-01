@@ -35,6 +35,7 @@ func main() {
 		os.Exit(1)
 	}
 
+	// Get the config
 	var err error
 	cfg, err := config.GetConfig(*configPath)
 	if err != nil {
@@ -47,6 +48,7 @@ func main() {
 		runBuild(cfg)
 	case "serve":
 		runBuild(cfg)
+		// @TODO: Is there a better way to do this?
 		wg := new(sync.WaitGroup)
 		wg.Add(3)
 		go func() {
@@ -81,7 +83,7 @@ func watchDirs(cfg config.Config) {
 	defer watcher.Close()
 
 	go func() {
-		builder := createBuilder(cfg)
+		builder := builder.NewBuilder(cfg)
 		for {
 			select {
 			case event, ok := <-watcher.Events:
@@ -106,7 +108,7 @@ func watchDirs(cfg config.Config) {
 		}
 	}()
 
-	dirs := []string{cfg.MarkdownDir, cfg.WebTemplateDir}
+	dirs := []string{cfg.Content.ContentDir, cfg.Web.TemplateDir}
 	for _, dir := range dirs {
 		fmt.Println("watching directory:", dir)
 		err = watcher.Add(dir)
@@ -118,48 +120,22 @@ func watchDirs(cfg config.Config) {
 	<-done
 }
 
-func createBuilder(cfg config.Config) builder.Builder {
-	builderCfg := builder.BuilderConfig{
-		AssetsDir:       cfg.WebAssetsDir,
-		TemplateDir:     cfg.WebTemplateDir,
-		MarkdownDir:     cfg.MarkdownDir,
-		WebOutputDir:    cfg.WebOutputDir,
-		GeminiOutputDir: cfg.GeminiOutputDir,
-		GeminiFooter:    cfg.GeminiFooter,
-		BuildWeb:        true,
-		BuildGemini:     true,
-		PrintAst:        false,
-	}
-	return builder.NewBuilder(builderCfg)
-}
-
 func runGeminiServer(cfg config.Config) {
-	serverCfg := gemini.GeminiServerConfig{
-		ContentDir: cfg.GeminiOutputDir,
-		HostName:   cfg.HostName,
-		CertStore:  cfg.GeminiCertStore,
-		Port:       1965,
-	}
-
-	server := gemini.NewGeminiServer(serverCfg)
+	server := gemini.NewGeminiServer(cfg.Gemini)
 	if err := server.Start(); err != nil {
 		os.Exit(1)
 	}
 }
 
 func runWebServer(cfg config.Config) {
-	serverCfg := web.WebServerConfig{
-		ContentDir: cfg.WebOutputDir,
-		Port:       8080,
-	}
-	server := web.NewWebServer(serverCfg)
+	server := web.NewWebServer(cfg.Web)
 	if err := server.Start(); err != nil {
 		os.Exit(1)
 	}
 }
 
 func runBuild(cfg config.Config) {
-	builder := createBuilder(cfg)
+	builder := builder.NewBuilder(cfg)
 	err := builder.BuildAll()
 	if err != nil {
 		os.Exit(1)
