@@ -9,6 +9,7 @@ import (
 	"ibeji/web"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 
 	"github.com/fsnotify/fsnotify"
@@ -24,14 +25,18 @@ func main() {
 
 	// Ensure a config path is provided
 	if *configPath == "" {
-		fmt.Println("config file path is required")
-		os.Exit(1)
+		if stat, _ := os.Stat("config.toml"); stat == nil {
+			fmt.Println("no config file found nor provided with config flag")
+			os.Exit(1)
+		}
+
+		*configPath = "config.toml"
 	}
 
-	// Ensure a valid subcommand is provided
+	// Ensure a valid argument is provided
 	args := flag.Args()
 	if len(args) < 1 {
-		fmt.Println("expected 'serve' or 'build' subcommand")
+		fmt.Println("expected 'serve' or 'build' as an argument")
 		os.Exit(1)
 	}
 
@@ -93,9 +98,11 @@ func watchDirs(cfg config.Config) {
 
 				if event.Op&fsnotify.Write == fsnotify.Write {
 					fmt.Println("detected modified file:", event.Name)
-					if filepath.Ext(event.Name) == ".tmpl" {
+					ext := strings.ToLower(filepath.Ext(event.Name))
+					switch ext {
+					case ".tmpl":
 						builder.BuildAll()
-					} else {
+					case ".md", ".markdown":
 						builder.BuildFile(event.Name)
 					}
 				}
@@ -108,7 +115,7 @@ func watchDirs(cfg config.Config) {
 		}
 	}()
 
-	dirs := []string{cfg.Content.ContentDir, cfg.Web.TemplateDir}
+	dirs := []string{cfg.Content.ContentDir, filepath.Dir(cfg.Web.TemplatePath)}
 	for _, dir := range dirs {
 		fmt.Println("watching directory:", dir)
 		err = watcher.Add(dir)

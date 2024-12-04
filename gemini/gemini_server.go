@@ -55,7 +55,7 @@ func (s *GeminiServer) Start() error {
 	return nil
 }
 
-// getGeminiPage acts as the handler function for all gemini requests
+// getGeminiPage acts as the handler function for all requests
 func (s *GeminiServer) getGeminiPage(_ context.Context, w gemini.ResponseWriter, r *gemini.Request) {
 	gemini.ServeFile(w, os.DirFS(s.Config.OutputDir), r.URL.Path)
 }

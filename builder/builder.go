@@ -3,6 +3,7 @@ package builder
 import (
 	"bytes"
 	"fmt"
+	"html/template"
 	"ibeji/config"
 	"ibeji/file"
 	"ibeji/gemini"
@@ -28,8 +29,7 @@ type TemplateData struct {
 }
 
 type builder struct {
-	Config        config.Config
-	templateCache *web.TemplateCache
+	Config config.Config
 }
 
 type Builder interface {
@@ -37,42 +37,51 @@ type Builder interface {
 	BuildFile(path string) error
 }
 
-func NewBuilder(c config.Config) Builder {
-	templateCacheCfg := web.TemplateCacheConfig{
-		Development: true,
-		TemplateDir: c.Web.TemplateDir,
-	}
-	templateCache := web.NewTemplateCache(templateCacheCfg)
-	err := templateCache.LoadTemplates()
-	if err != nil {
-		fmt.Printf("unable to load templates: %v", err)
-		os.Exit(1)
-	}
-
+func NewBuilder(cfg config.Config) Builder {
 	builder := &builder{
-		Config:        c,
-		templateCache: templateCache,
+		Config: cfg,
 	}
 
 	return builder
+}
+
+func getFuncMap() template.FuncMap {
+	return template.FuncMap{
+		"bytesToHTML": func(b []byte) template.HTML {
+			return template.HTML(string(b))
+		},
+	}
 }
 
 // BuildAll walks the markdown directory and builds all markdown files
 // after clearing the output directories.
 func (b *builder) BuildAll() error {
 	if b.Config.Web.Enabled {
-		prepareOutputDir(b.Config.Web.OutputDir)
+		if err := prepareOutputDir(b.Config.Web.OutputDir); err != nil {
+			return err
+		}
+
 		b.copyWebAssets()
+		b.createWebTemplate()
 	}
 
 	if b.Config.Gemini.Enabled {
 		prepareOutputDir(b.Config.Gemini.OutputDir)
 	}
 
-	err := filepath.Walk(b.Config.Content.ContentDir, b.createWalkFunc())
+	files, err := os.ReadDir(b.Config.Content.ContentDir)
 	if err != nil {
-		fmt.Println("could not complete markdown conversion", err)
-		os.Exit(1)
+		fmt.Println("could not read content directory:", err)
+		return err
+	}
+
+	for _, file := range files {
+		ext := strings.ToLower(filepath.Ext(file.Name()))
+		if !file.IsDir() && (ext == ".md" || ext == ".markdown") {
+			if err := b.BuildFile(b.Config.Content.ContentDir + "/" + file.Name()); err != nil {
+				return err
+			}
+		}
 	}
 
 	return nil
@@ -80,13 +89,6 @@ func (b *builder) BuildAll() error {
 
 // BuildFile converts a single markdown file to HTML and gemtext.
 func (b *builder) BuildFile(path string) error {
-	ext := strings.ToLower(filepath.Ext(path))
-
-	if ext != ".md" && ext != ".markdown" {
-		fmt.Printf("skipping file %v, not a markdown file\n", path)
-		return nil
-	}
-
 	fileContents, err := os.ReadFile(path)
 	if err != nil {
 		fmt.Println("unable to read file:", path)
@@ -109,40 +111,29 @@ func (b *builder) BuildFile(path string) error {
 	return nil
 }
 
-func prepareOutputDir(dir string) error {
-	err := file.RemoveIfExists(dir)
+func (b *builder) createWebTemplate() error {
+	_, err := template.New("template").Funcs(getFuncMap()).ParseFiles(b.Config.Web.TemplatePath)
 	if err != nil {
-		fmt.Printf("unable to purge existing output dir: %v: %v\n", dir, err)
-		os.Exit(1)
-	}
-
-	err = os.MkdirAll(dir, 0755)
-	if err != nil {
-		fmt.Printf("could not create output directory: %v: %v\n", dir, err)
-		os.Exit(1)
+		return err
 	}
 
 	return nil
 }
 
-// createWalkFunc returns a function that is used to walk the markdown directory.
-func (b *builder) createWalkFunc() func(string, os.FileInfo, error) error {
-	return func(path string, info os.FileInfo, err error) error {
-		if err != nil {
-			fmt.Println("error walking directory:", err)
-			return err
-		}
-
-		if info.IsDir() {
-			return nil
-		}
-
-		if file.IsDatePrefixed(path) {
-			// Add file to collection
-		}
-
-		return b.BuildFile(path)
+func prepareOutputDir(dir string) error {
+	err := file.RemoveIfExists(dir)
+	if err != nil {
+		fmt.Printf("unable to purge existing output dir: %v: %v\n", dir, err)
+		return err
 	}
+
+	err = os.MkdirAll(dir, 0755)
+	if err != nil {
+		fmt.Printf("could not create output directory: %v: %v\n", dir, err)
+		return err
+	}
+
+	return nil
 }
 
 func (b *builder) copyWebAssets() error {
@@ -163,7 +154,8 @@ func (b *builder) outputHTML(contents []byte, filename string) error {
 			extension.Typographer,
 		),
 	)
-	var buf bytes.Buffer
+
+	var mdBuf bytes.Buffer
 	reader := text.NewReader(contents)
 	doc := md.Parser().Parse(reader)
 	title, err := getTitle(doc, contents)
@@ -171,7 +163,7 @@ func (b *builder) outputHTML(contents []byte, filename string) error {
 		fmt.Println("[WARN] could not get title for doc:", filename)
 	}
 
-	if err := md.Renderer().Render(&buf, contents, doc); err != nil {
+	if err := md.Renderer().Render(&mdBuf, contents, doc); err != nil {
 		fmt.Println("could not convert markdown to HTML:", err)
 		return err
 	}
@@ -179,10 +171,17 @@ func (b *builder) outputHTML(contents []byte, filename string) error {
 	outputFilename := normalizeFilename(filename)
 	data := TemplateData{
 		Title:    title,
-		Content:  buf.Bytes(),
+		Content:  mdBuf.Bytes(),
 		Filename: outputFilename,
 	}
-	renderedHTML, err := b.templateCache.Render("base", data)
+
+	var html strings.Builder
+	template, err := template.New(filepath.Base(b.Config.Web.TemplatePath)).Funcs(getFuncMap()).ParseFiles(b.Config.Web.TemplatePath)
+	if err != nil {
+		fmt.Println("could not parse template:", err)
+		return err
+	}
+	err = template.Execute(&html, data)
 	if err != nil {
 		fmt.Println("could not render template:", err)
 		return err
@@ -190,7 +189,7 @@ func (b *builder) outputHTML(contents []byte, filename string) error {
 
 	outputPath := b.Config.Web.OutputDir + "/" + outputFilename + ".html"
 	fmt.Println("writing file:", outputPath)
-	os.WriteFile(outputPath, []byte(renderedHTML), 0644)
+	os.WriteFile(outputPath, []byte(html.String()), 0644)
 
 	return nil
 }

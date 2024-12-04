@@ -1,9 +1,22 @@
-HostName="localhost"
-GeminiPort=1965
-WebPort=9090
-GeminiCertStore="/tmp"
-MarkdownDir="content"
-WebTemplateDir="templates"
-GeminiOutputDir="_gemini"
-WebOutputDir="_web"
-GeminiFooter = "=> https://creativecommons.org/licenses/by-sa/4.0/ Licensed under CC BY-SA 4.0"
+[Content]
+ContentDir = "./example/content"
+Wikilinks = true
+
+[Web]
+Enabled = true
+Port = 9090
+AssetsDir = "./example/assets"
+TemplateDir = "./example/templates"
+OutputDir = "_web"
+
+[Gemini]
+Enabled = true
+Hostname = "localhost"
+Port = 1965
+CertStore = "/tmp"
+OutputDir = "_gemini"
+
+[[Streams]]
+Name = "Blog"
+Slug = "blog"
+ContentPath = "./example/content/blog"

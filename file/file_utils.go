@@ -9,6 +9,18 @@ import (
 	"strings"
 )
 
+func PurgeDir(dir string) error {
+	if err := RemoveIfExists(dir); err != nil {
+		return err
+	}
+
+	if err := os.MkdirAll(dir, 0755); err != nil {
+		return err
+	}
+
+	return nil
+}
+
 // Copy copies a file from src to dest
 func Copy(src string, dest string) error {
 	in, err := os.Open(src)

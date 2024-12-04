@@ -2,11 +2,11 @@ package config
 
 import "github.com/BurntSushi/toml"
 
-// Stream represents configuration information for a stream of posts.
-type Stream struct {
-	Name       string
-	Slug       string
-	ContentDir string
+// StreamConfig represents configuration information for a stream of posts.
+type StreamConfig struct {
+	Name        string
+	Slug        string
+	ContentPath string
 }
 
 type ContentConfig struct {
@@ -15,11 +15,11 @@ type ContentConfig struct {
 }
 
 type WebConfig struct {
-	Enabled     bool
-	Port        int
-	TemplateDir string
-	AssetsDir   string
-	OutputDir   string
+	Enabled      bool
+	Port         int
+	TemplatePath string
+	AssetsDir    string
+	OutputDir    string
 }
 
 type GeminiConfig struct {
@@ -34,7 +34,7 @@ type Config struct {
 	Content ContentConfig
 	Web     WebConfig
 	Gemini  GeminiConfig
-	Streams []Stream
+	Streams []StreamConfig
 }
 
 func GetConfig(filename string) (Config, error) {

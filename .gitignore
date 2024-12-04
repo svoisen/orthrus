@@ -24,6 +24,4 @@ go.work.sum
 # Project specific files
 _web/
 _gemini/
-content/
-templates/
 config.toml
