@@ -19,7 +19,9 @@ require (
 	git.sr.ht/~kota/fuckery v0.2.0 // indirect
 	github.com/alecthomas/chroma v0.10.0 // indirect
 	github.com/dlclark/regexp2 v1.4.0 // indirect
+	go.abhg.dev/goldmark/frontmatter v0.2.0 // indirect
 	golang.org/x/net v0.25.0 // indirect
 	golang.org/x/sys v0.20.0 // indirect
 	golang.org/x/text v0.15.0 // indirect
+	gopkg.in/yaml.v3 v3.0.1 // indirect
 )

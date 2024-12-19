@@ -13,6 +13,7 @@ import (
 	highlighting "github.com/yuin/goldmark-highlighting"
 	"github.com/yuin/goldmark/extension"
 	"github.com/yuin/goldmark/text"
+	"go.abhg.dev/goldmark/frontmatter"
 	"go.abhg.dev/goldmark/wikilink"
 )
 
@@ -168,6 +169,7 @@ func (b *builder) outputHTML(contents []byte, path string) error {
 			&wikilink.Extender{
 				Resolver: WikilinkResolver{},
 			},
+			&frontmatter.Extender{},
 			extension.Linkify,
 			extension.Strikethrough,
 			extension.Typographer,
@@ -224,6 +226,7 @@ func (b *builder) outputGemtext(contents []byte, path string) error {
 			wiki.Wiki,
 			extension.Linkify,
 			extension.Strikethrough,
+			&frontmatter.Extender{},
 		),
 	)
 
