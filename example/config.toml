@@ -6,7 +6,7 @@ Wikilinks = true
 
 [Web]
 # The port the web server should listen on.
-Port = 9090
+Port = 8080
 # The directory where the static assets are stored.
 AssetsDir = "assets"
 # The name of the template to use for all pages. This should correspond to the 

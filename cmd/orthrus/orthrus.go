@@ -32,10 +32,12 @@ func main() {
 	}
 
 	// Ensure an argument is provided
+	var command string
 	args := flag.Args()
 	if len(args) < 1 {
-		fmt.Println("expected 'serve' or 'build' as an argument")
-		os.Exit(1)
+		command = "build"
+	} else {
+		command = args[0]
 	}
 
 	// Get the config
@@ -46,7 +48,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	switch args[0] {
+	switch command {
 	case "build":
 		runBuild(cfg)
 	case "serve":
