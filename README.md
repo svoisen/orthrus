@@ -28,13 +28,18 @@ defined, the servers default to the following:
 - Gemini: port 1965
 - Web: port 8080
 
-## HTML templates
+## Templates
 
-Orthrus supports templates using go's standard templating language. For
+Templates are expected for both HTML and Gemtext content. Template files that
+are prefixed with an underscore (`_`) are treated as partials to be used in
+other templates.
+
+Orthrus templates must use Go's standard templating language. For
 information on how to write templates, [see the documentation for the
 `html/template` package](https://pkg.go.dev/html/template) of the go standard library.
 
-Orthrus expects all templates to use the `.tmpl` file extension.
+Orthrus expects all templates to use the `.tmpl` file extension. For example
+templates, see the `example/templates` directory.
 
 ## Configuration file
 
