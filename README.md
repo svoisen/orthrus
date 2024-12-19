@@ -20,7 +20,12 @@ none is provided.
 The `build` subcommand will build all HTML and gemtext content, then exit.
 
 The `serve` subcommand will run local servers for web and gemini, watching
-changes to any markdown files and rebuilding content as needed.
+changes to any markdown files and rebuilding content as needed. Each server will
+run on the ports defined in the `config.toml`. If no ports are defined, the
+servers default to the following:
+
+- Gemini: port 1965
+- Web: port 8080
 
 ## HTML templates
 

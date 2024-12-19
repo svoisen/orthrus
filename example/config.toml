@@ -1,0 +1,18 @@
+[Content]
+ContentDir = "content"
+Wikilinks = true
+
+[Web]
+Port = 9090
+AssetsDir = "assets"
+PageTemplate = "page"
+TemplateDir = "templates/web"
+OutputDir = "_web"
+
+[Gemini]
+Hostname = "localhost"
+Port = 1965
+CertStore = "/tmp"
+PageTemplate = "page"
+TemplateDir = "templates/gemini"
+OutputDir = "_gemini"

@@ -1,0 +1,9 @@
+{{ define "content" }}
+  <article>
+    {{ bytesToHTML .Content }}
+  </article>
+{{ end }}
+
+{{ define "page" }}
+  {{ template "base" . }}
+{{ end }}
