@@ -1,4 +1,4 @@
-module ibeji
+module orthrus
 
 go 1.23.1
 

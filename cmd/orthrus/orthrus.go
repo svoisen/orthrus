@@ -3,7 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
-	"ibeji/internal/ibeji"
+	"orthrus/internal/orthrus"
 	"os"
 	"path/filepath"
 	"strings"
@@ -40,7 +40,7 @@ func main() {
 
 	// Get the config
 	var err error
-	cfg, err := ibeji.GetConfig(*configPath)
+	cfg, err := orthrus.GetConfig(*configPath)
 	if err != nil {
 		fmt.Println("could not load config file")
 		os.Exit(1)
@@ -74,7 +74,7 @@ func main() {
 	}
 }
 
-func watchDirs(cfg ibeji.Config) {
+func watchDirs(cfg orthrus.Config) {
 	watcher, err := fsnotify.NewWatcher()
 	if err != nil {
 		fmt.Println("could not create watcher:", err)
@@ -86,7 +86,7 @@ func watchDirs(cfg ibeji.Config) {
 	defer watcher.Close()
 
 	go func() {
-		builder := ibeji.NewBuilder(cfg)
+		builder := orthrus.NewBuilder(cfg)
 		for {
 			select {
 			case event, ok := <-watcher.Events:
@@ -129,22 +129,22 @@ func watchDirs(cfg ibeji.Config) {
 	<-done
 }
 
-func runGeminiServer(cfg ibeji.Config) {
-	server := ibeji.NewGeminiServer(cfg.Gemini)
+func runGeminiServer(cfg orthrus.Config) {
+	server := orthrus.NewGeminiServer(cfg.Gemini)
 	if err := server.Start(); err != nil {
 		os.Exit(1)
 	}
 }
 
-func runWebServer(cfg ibeji.Config) {
-	server := ibeji.NewWebServer(cfg.Web)
+func runWebServer(cfg orthrus.Config) {
+	server := orthrus.NewWebServer(cfg.Web)
 	if err := server.Start(); err != nil {
 		os.Exit(1)
 	}
 }
 
-func runBuild(cfg ibeji.Config) {
-	builder := ibeji.NewBuilder(cfg)
+func runBuild(cfg orthrus.Config) {
+	builder := orthrus.NewBuilder(cfg)
 	err := builder.BuildAll()
 	if err != nil {
 		os.Exit(1)

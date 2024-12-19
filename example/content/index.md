@@ -1,3 +1,7 @@
+---
+tags: foo bar
+---
+
 # Index
 
 This is the index.

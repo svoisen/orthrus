@@ -1,4 +1,4 @@
-package ibeji
+package orthrus
 
 import (
 	"context"
