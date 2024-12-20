@@ -7,6 +7,11 @@ type ContentConfig struct {
 	ContentDir string
 }
 
+type AssetsConfig struct {
+	SourceDir string
+	DestDir   string
+}
+
 type WebConfig struct {
 	Enabled      bool
 	Port         int
@@ -30,6 +35,7 @@ type Config struct {
 	Content ContentConfig
 	Web     WebConfig
 	Gemini  GeminiConfig
+	Assets  []AssetsConfig
 }
 
 // GetConfig reads the configuration from a file and returns a Config struct.

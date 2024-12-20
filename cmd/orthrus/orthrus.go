@@ -52,7 +52,6 @@ func main() {
 	case "build":
 		runBuild(cfg)
 	case "serve":
-		runBuild(cfg)
 		// @TODO: Is there a better way to do this?
 		wg := new(sync.WaitGroup)
 		wg.Add(3)
@@ -89,6 +88,11 @@ func watchDirs(cfg orthrus.Config) {
 
 	go func() {
 		builder := orthrus.NewBuilder(cfg)
+		err := builder.BuildAll()
+		if err != nil {
+			return
+		}
+
 		for {
 			select {
 			case event, ok := <-watcher.Events:

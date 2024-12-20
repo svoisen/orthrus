@@ -71,6 +71,7 @@ type builder struct {
 type Builder interface {
 	BuildAll() error
 	BuildFile(path string) error
+	LoadTemplates() error
 }
 
 // NewBuilder creates a new Builder with the provided configuration.
@@ -93,9 +94,18 @@ func (b *builder) BuildAll() error {
 		return err
 	}
 
-	if err := CopyDir(b.Config.Web.AssetsDir, b.Config.Web.OutputDir); err != nil {
-		fmt.Println("could not copy web assets:", err)
-		return err
+	for _, assetSet := range b.Config.Assets {
+		fmt.Println("copying assets:", assetSet.SourceDir, "to", assetSet.DestDir)
+
+		if err := PurgeDir(assetSet.DestDir); err != nil {
+			fmt.Println("could not asset directory:", err)
+			return err
+		}
+
+		if err := CopyDir(assetSet.SourceDir, assetSet.DestDir); err != nil {
+			fmt.Println("could not copy assets:", err)
+			return err
+		}
 	}
 
 	// Prepare the output directory for gemini output
@@ -104,14 +114,7 @@ func (b *builder) BuildAll() error {
 		return err
 	}
 
-	// Load templates
-	if err := b.WebTemplateCache.LoadTemplates(b.Config.Web.TemplateDir); err != nil {
-		fmt.Println("could not load web templates:", err)
-		return err
-	}
-
-	if err := b.GeminiTemplateCache.LoadTemplates(b.Config.Gemini.TemplateDir); err != nil {
-		fmt.Println("could not load gemini templates:", err)
+	if err := b.LoadTemplates(); err != nil {
 		return err
 	}
 
@@ -129,6 +132,20 @@ func (b *builder) BuildAll() error {
 				return err
 			}
 		}
+	}
+
+	return nil
+}
+
+func (b *builder) LoadTemplates() error {
+	if err := b.WebTemplateCache.LoadTemplates(b.Config.Web.TemplateDir); err != nil {
+		fmt.Println("could not load web templates:", err)
+		return err
+	}
+
+	if err := b.GeminiTemplateCache.LoadTemplates(b.Config.Gemini.TemplateDir); err != nil {
+		fmt.Println("could not load gemini templates:", err)
+		return err
 	}
 
 	return nil

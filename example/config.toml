@@ -30,3 +30,7 @@ CertStore = "/tmp"
 PageTemplate = "page"
 TemplateDir = "templates/gemini"
 OutputDir = "_gemini"
+
+[[Assets]]
+SourceDir = "assets"
+DestDir = "_web/assets"
