@@ -107,7 +107,7 @@ func watchDirs(cfg orthrus.Config) {
 					case ".tmpl":
 						builder.BuildAll()
 					case ".md", ".markdown":
-						builder.BuildFile(event.Name)
+						// builder.BuildFile(event.Name)
 					}
 				}
 			case err, ok := <-watcher.Errors:
@@ -124,6 +124,11 @@ func watchDirs(cfg orthrus.Config) {
 		cfg.Web.TemplateDir,
 		cfg.Gemini.TemplateDir,
 	}
+
+	for _, stream := range cfg.Streams {
+		dirs = append(dirs, stream.ContentDir)
+	}
+
 	for _, dir := range dirs {
 		fmt.Println("watching directory:", dir)
 		err = watcher.Add(dir)

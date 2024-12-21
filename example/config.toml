@@ -11,8 +11,6 @@ Wikilinks = true
 [Web]
 # The port the web server should listen on.
 Port = 8080
-# The directory where the static assets are stored.
-AssetsDir = "assets"
 # The name of the template to use for all pages. This should correspond to the 
 # name of the file of the template, without any file extension.
 PageTemplate = "page"
@@ -32,9 +30,16 @@ CertStore = "/tmp"
 # The name of the template to use for all pages. This should correspond to the 
 # name of the file of the template, without any file extension.
 PageTemplate = "page"
+# The directory where the Gemini templates are stored. Templates should use the 
+# .tmpl extension.
 TemplateDir = "templates/gemini"
+# The directory where the generated Gemini pages should be stored.
 OutputDir = "_gemini"
 
 [[Assets]]
 SourceDir = "assets"
 DestDir = "_web/assets"
+
+[[Streams]]
+Name = "Blog"
+ContentDir = "content/blog"
