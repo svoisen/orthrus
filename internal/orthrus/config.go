@@ -32,10 +32,11 @@ type GeminiConfig struct {
 }
 
 type Config struct {
-	Content ContentConfig
-	Web     WebConfig
-	Gemini  GeminiConfig
-	Assets  []AssetsConfig
+	SiteName string
+	Content  ContentConfig
+	Web      WebConfig
+	Gemini   GeminiConfig
+	Assets   []AssetsConfig
 }
 
 // GetConfig reads the configuration from a file and returns a Config struct.

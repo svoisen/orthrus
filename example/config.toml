@@ -1,3 +1,7 @@
+# The name of the site. This is passed through to templates for display 
+# purposes.
+SiteName = "notes.voisen.org"
+
 [Content]
 # The directory where the markdown content files are stored.
 ContentDir = "content"

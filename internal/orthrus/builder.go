@@ -56,7 +56,8 @@ func (WikilinkResolver) ResolveWikilink(n *wikilink.Node) ([]byte, error) {
 	return dest[:i], nil
 }
 
-type WebTemplateData struct {
+type TemplateData struct {
+	SiteName string
 	Title    string
 	Content  []byte
 	Filename string
@@ -209,7 +210,8 @@ func (b *builder) outputHTML(contents []byte, path string) error {
 		return err
 	}
 
-	data := WebTemplateData{
+	data := TemplateData{
+		SiteName: b.Config.SiteName,
 		Title:    title,
 		Content:  mdBuf.Bytes(),
 		Filename: Basename(outputFilename),
